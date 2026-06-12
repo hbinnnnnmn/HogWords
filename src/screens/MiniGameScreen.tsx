@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, Swords } from 'lucide-react'
-import { useCallback, useState } from 'react' // ⚡ Unused useEffect 깔끔하게 제거 완료!
+import { useCallback, useState } from 'react' 
 import { useNavigate } from 'react-router-dom'
 import confetti from 'canvas-confetti' 
 import { CandleTimer } from '../components/CandleTimer'
@@ -18,7 +18,7 @@ const TIMER_SECONDS = 10
 
 type Phase = 'battle' | 'complete'
 
-// 1. 화면 흔들림(Shake) 효과를 위한 CSS 주입 스타일링
+// 🛠️ [버그 컷 1] 애니메이션 이름 분리를 일치시켰습니다 (screenShake -> screenShake)
 const shakeStyle = `
   @keyframes screenShake {
     0%, 100% { transform: translateX(0); }
@@ -28,7 +28,6 @@ const shakeStyle = `
   .animate-screen-shake { animation: screenShake 0.4s ease-in-out; }
 `;
 
-// 2. 메모리 누수 방지를 위한 오디오 객체 컴포넌트 외부 선언 (브라우저 Web Audio API 기반)
 const soundCorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav');
 const soundIncorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2513/2513-84.wav');
 const soundVictory = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-84.wav');
@@ -48,18 +47,14 @@ export function MiniGameScreen() {
   const [phase, setPhase] = useState<Phase>('battle')
   const [timerKey, setTimerKey] = useState(0)
   const [casting, setCasting] = useState(false)
-  
-  // Zustand completeDuel의 리턴 타입 호환성 오류 가드 (`any` 매핑으로 안전조치)
   const [result, setResult] = useState<any | null>(null)
 
-  // 신규 추가된 시각 효과 상태 스태프
   const [isShaking, setIsShaking] = useState(false);
   const [flashColor, setFlashColor] = useState<string | null>(null);
 
   const current = questions[index]
   const isLastQuestion = index >= questions.length - 1
 
-  // 내 기숙사 상징에 따른 동적 마법 스펠 컬러 바인딩
   const getHouseSpellColor = () => {
     if (user?.house === 'Gryffindor') return 'bg-red-600/25';   
     if (user?.house === 'Slytherin') return 'bg-emerald-600/25'; 
@@ -67,7 +62,6 @@ export function MiniGameScreen() {
     return 'bg-amber-500/25';                                    
   };
 
-  // 최종 결투 대승리 시 사방 연쇄 폭죽 및 승리 오디오 팡파르 트리거 함수
   const triggerVictoryMagic = useCallback(() => {
     soundVictory.currentTime = 0;
     soundVictory.play().catch((e) => console.log('Audio blocked:', e));
@@ -86,7 +80,6 @@ export function MiniGameScreen() {
       setResult(duelResult)
       setPhase('complete')
       
-      // 정답을 3개 이상 맞추어 결투에서 최종 승리했을 때 시청각 피날레 연출
       if (finalCorrect >= 3) {
         triggerVictoryMagic();
       }
@@ -102,17 +95,14 @@ export function MiniGameScreen() {
         setCorrectCount(nextCorrect)
         setEnemyHp((hp) => Math.max(0, hp - DAMAGE))
         
-        // [청각] 기존 레거시 비프음 + 신규 고품질 마법 지팡이 주문 적중음 사운드 레이어드
         playDuelHitSound()
         soundCorrect.currentTime = 0;
         soundCorrect.play().catch(() => {});
 
-        // [시각] 기숙사 주문 섬광 및 화면 진동 발동
         setFlashColor(getHouseSpellColor());
         setIsShaking(true);
         setCasting(true)
 
-        // [시각] 정답 즉시 팡 터지는 마법 가루 파티클 임팩트
         confetti({
           particleCount: 25,
           spread: 45,
@@ -129,12 +119,10 @@ export function MiniGameScreen() {
       } else {
         setPlayerHp((hp) => Math.max(0, hp - DAMAGE))
         
-        // [청각] 기존 쉴드 효과음 + 마법 시전 실패 버저음 출력
         playShieldHitSound()
         soundIncorrect.currentTime = 0;
         soundIncorrect.play().catch(() => {});
 
-        // [시각] 적에게 타격받았을 때 경고용 붉은 오버레이 섬광 오프셋
         setFlashColor('bg-red-950/40');
         setTimeout(() => setFlashColor(null), 400);
       }
@@ -164,7 +152,6 @@ export function MiniGameScreen() {
     resolveAnswer(false)
   }, [selected, phase, resolveAnswer])
 
-  // 결투 준비 에셋 로딩 예외 처리
   if (!current && phase === 'battle') {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-bg text-[#aaa] font-medium">
@@ -173,7 +160,6 @@ export function MiniGameScreen() {
     )
   }
 
-  // Phase: 결투 완료 및 보상 정산 리포트 레이아웃
   if (phase === 'complete') {
     const won = (result?.correct ?? correctCount) >= 3
     return (
@@ -212,20 +198,16 @@ export function MiniGameScreen() {
     )
   }
 
-  // Phase: 마법 결투 인게임 레이아웃
   return (
     <div className={`relative flex min-h-dvh flex-col bg-bg ${isShaking ? 'animate-screen-shake' : ''} transition-all duration-300`}>
       <style>{shakeStyle}</style>
       <StarParticles count={30} />
 
-      {/* 실시간으로 화면 전면에 배치되어 쾅 터지는 스펠 라이트 오버레이막 */}
       {flashColor && (
         <div className={`fixed inset-0 ${flashColor} pointer-events-none z-50 transition-all duration-300`} />
       )}
 
       <PageContainer className="relative z-10 flex flex-1 flex-col pb-4" wide={false}>
-        
-        {/* 상단 결투 상태 헤더 바 */}
         <header className="mb-4 flex items-center gap-3">
           <button
             type="button"
@@ -248,26 +230,13 @@ export function MiniGameScreen() {
           </span>
         </header>
 
-        {/* 쉴드 상태 비탈 레이아웃 바 분할 배치 */}
         <div className="mb-6 grid grid-cols-2 gap-4">
           <HealthBar label="나의 마법 방어막" current={playerHp} max={PLAYER_HP} color="gold" />
-          <HealthBar
-            label="어둠의 마법사 체력"
-            current={enemyHp}
-            max={ENEMY_HP}
-            color="red"
-            align="right"
-          />
+          <HealthBar label="어둠의 마법사 체력" current={enemyHp} max={ENEMY_HP} color="red" align="right" />
         </div>
 
-        {/* 양초 타임 퓨즈 제어 컴포넌트 */}
         <div className="flex justify-center">
-          <CandleTimer
-            key={timerKey}
-            seconds={TIMER_SECONDS}
-            active={selected === null}
-            onExpire={onTimerExpire}
-          />
+          <CandleTimer key={timerKey} seconds={TIMER_SECONDS} active={selected === null} onExpire={onTimerExpire} />
         </div>
 
         <AnimatePresence mode="wait">
@@ -278,9 +247,58 @@ export function MiniGameScreen() {
             exit={{ opacity: 0, y: -12 }}
             className="relative mt-6 flex-1 flex flex-col justify-center"
           >
-            {/* 정답 조작 성공 시 번개 타격 시각 애니메이션 오버레이 */}
+            {/* 🛠️ [버그 컷 2] 피격 시 라이트닝 이펙트와 잘려있던 중괄호 및 지연 노드를 복원 완비했습니다 */}
             {casting && (
               <motion.div
                 initial={{ scale: 0, opacity: 1 }}
                 animate={{ scale: 2, opacity: 0 }}
-                className="pointer-events-none absolute left-1/2 top-1/4 z-20
+                className="pointer-events-none absolute left-1/2 top-1/4 z-20 -translate-x-1/2 text-6xl"
+              >
+                ⚡
+              </motion.div>
+            )}
+
+            <GlassCard className="p-6">
+              <p className="text-xs uppercase tracking-wider text-purple font-semibold">마법 양피지 스크롤</p>
+              <p className="mt-4 font-display text-xl leading-relaxed text-white font-serif">
+                {current.prompt}
+              </p>
+              <p className="mt-2 text-xs text-[#aaa] font-medium">* 빈칸에 들어갈 올바른 마법 주문 단어를 영창하세요.</p>
+
+              <div className="mt-6 grid gap-3">
+                {current.options.map((opt, i) => {
+                  const show = selected !== null
+                  const isCorrect = i === current.correctIndex
+                  const isChosen = selected === i
+                  
+                  let cls = 'rounded-xl border px-4 py-4 text-left text-sm font-bold tracking-wide transition-all '
+                  if (!show) {
+                    cls += 'border-white/10 bg-white/5 hover:border-gold/40 active:scale-[0.99]'
+                  } else if (isCorrect) {
+                    cls += 'border-gold bg-gold/20 text-gold shadow-[0_0_12px_rgba(212,175,55,0.2)]'
+                  } else if (isChosen) {
+                    cls += 'border-red-500/40 bg-red-900/20 text-red-200'
+                  } else {
+                    cls += 'border-white/5 opacity-30 scale-[0.98]'
+                  }
+                  
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      disabled={show}
+                      onClick={() => pickOption(i)}
+                      className={cls}
+                    >
+                      {opt}
+                    </button>
+                  )
+                })}
+              </div>
+            </GlassCard>
+          </motion.div>
+        </AnimatePresence>
+      </PageContainer>
+    </div>
+  )
+}
