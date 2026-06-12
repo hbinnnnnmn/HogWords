@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, Swords } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useState } from 'react' // ⚡ Unused useEffect 깔끔하게 제거 완료!
 import { useNavigate } from 'react-router-dom'
-import confetti from 'canvas-confetti' // 👈 폭죽 라이브러리 연동
+import confetti from 'canvas-confetti' 
 import { CandleTimer } from '../components/CandleTimer'
 import { GlassCard } from '../components/GlassCard'
 import { HealthBar } from '../components/HealthBar'
@@ -35,7 +35,7 @@ const soundVictory = new Audio('https://assets.mixkit.co/active_storage/sfx/1435
 
 export function MiniGameScreen() {
   const navigate = useNavigate()
-  const user = useAppStore((s) => s.user) // 기숙사 색상 추출용 유저 데이터 가져오기
+  const user = useAppStore((s) => s.user) 
   const buildDuelQuestions = useAppStore((s) => s.buildDuelQuestions)
   const completeDuel = useAppStore((s) => s.completeDuel)
 
@@ -61,10 +61,10 @@ export function MiniGameScreen() {
 
   // 내 기숙사 상징에 따른 동적 마법 스펠 컬러 바인딩
   const getHouseSpellColor = () => {
-    if (user?.house === 'Gryffindor') return 'bg-red-600/25';   // 붉은 섬광
-    if (user?.house === 'Slytherin') return 'bg-emerald-600/25'; // 초록 섬광
-    if (user?.house === 'Ravenclaw') return 'bg-blue-600/25';    // 푸른 섬광
-    return 'bg-amber-500/25';                                    // 후플푸프 황금 섬광
+    if (user?.house === 'Gryffindor') return 'bg-red-600/25';   
+    if (user?.house === 'Slytherin') return 'bg-emerald-600/25'; 
+    if (user?.house === 'Ravenclaw') return 'bg-blue-600/25';    
+    return 'bg-amber-500/25';                                    
   };
 
   // 최종 결투 대승리 시 사방 연쇄 폭죽 및 승리 오디오 팡파르 트리거 함수
@@ -214,12 +214,11 @@ export function MiniGameScreen() {
 
   // Phase: 마법 결투 인게임 레이아웃
   return (
-    // 3. 화면 타격 성공 시 전체 컨테이너에 animate-screen-shake 클래스 유동 할당
     <div className={`relative flex min-h-dvh flex-col bg-bg ${isShaking ? 'animate-screen-shake' : ''} transition-all duration-300`}>
       <style>{shakeStyle}</style>
       <StarParticles count={30} />
 
-      {/* 4. 실시간으로 화면 전면에 배치되어 쾅 터지는 스펠 라이트 오버레이막 */}
+      {/* 실시간으로 화면 전면에 배치되어 쾅 터지는 스펠 라이트 오버레이막 */}
       {flashColor && (
         <div className={`fixed inset-0 ${flashColor} pointer-events-none z-50 transition-all duration-300`} />
       )}
@@ -284,54 +283,4 @@ export function MiniGameScreen() {
               <motion.div
                 initial={{ scale: 0, opacity: 1 }}
                 animate={{ scale: 2, opacity: 0 }}
-                className="pointer-events-none absolute left-1/2 top-1/4 z-20 -translate-x-1/2 text-6xl"
-              >
-                ⚡
-              </motion.div>
-            )}
-
-            <GlassCard className="p-6">
-              <p className="text-xs uppercase tracking-wider text-purple font-semibold">마법 양피지 스크롤</p>
-              <p className="mt-4 font-display text-xl leading-relaxed text-white font-serif">
-                {current.prompt}
-              </p>
-              <p className="mt-2 text-xs text-[#aaa] font-medium">* 빈칸에 들어갈 올바른 마법 주문 단어를 영창하세요.</p>
-
-              {/* 4지선다 스펠 매핑 선택지 그리드 구조 */}
-              <div className="mt-6 grid gap-3">
-                {current.options.map((opt, i) => {
-                  const show = selected !== null
-                  const isCorrect = i === current.correctIndex
-                  const isChosen = selected === i
-                  
-                  let cls = 'rounded-xl border px-4 py-4 text-left text-sm font-bold tracking-wide transition-all '
-                  if (!show) {
-                    cls += 'border-white/10 bg-white/5 hover:border-gold/40 active:scale-[0.99]'
-                  } else if (isCorrect) {
-                    cls += 'border-gold bg-gold/20 text-gold shadow-[0_0_12px_rgba(212,175,55,0.2)]'
-                  } else if (isChosen) {
-                    cls += 'border-red-500/40 bg-red-900/20 text-red-200'
-                  } else {
-                    cls += 'border-white/5 opacity-30 scale-[0.98]'
-                  }
-                  
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      disabled={show}
-                      onClick={() => pickOption(i)}
-                      className={cls}
-                    >
-                      {opt}
-                    </button>
-                  )
-                })}
-              </div>
-            </GlassCard>
-          </motion.div>
-        </AnimatePresence>
-      </PageContainer>
-    </div>
-  )
-}
+                className="pointer-events-none absolute left-1/2 top-1/4 z-20
