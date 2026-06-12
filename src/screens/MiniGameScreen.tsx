@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, Swords } from 'lucide-react'
-import { useCallback, useState, useEffect } from 'react' 
+import { useCallback, useState } from 'react' 
 import { useNavigate } from 'react-router-dom'
 import confetti from 'canvas-confetti' 
 import { CandleTimer } from '../components/CandleTimer'
@@ -18,7 +18,6 @@ const TIMER_SECONDS = 10
 
 type Phase = 'battle' | 'complete'
 
-// 🛠️ [버그 컷 1] 애니메이션 이름 분리를 일치시켰습니다 (screenShake -> screenShake)
 const shakeStyle = `
   @keyframes screenShake {
     0%, 100% { transform: translateX(0); }
@@ -28,9 +27,61 @@ const shakeStyle = `
   .animate-screen-shake { animation: screenShake 0.4s ease-in-out; }
 `;
 
-const soundCorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav');
-const soundIncorrect = new Audio('https://assets.mixkit.co/active_storage/sfx/2513/2513-84.wav');
-const soundVictory = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-84.wav');
+// ========================================================
+// ⚡ [강제 오디오 생성 마법 패키지] 외부 오디오 파일 없이 주파수를 직접 쏩니다!
+// ========================================================
+const playMagicSound = (type: 'correct' | 'incorrect' | 'victory') => {
+  try {
+    // 브라우저 소리 생성기 엔진 가동
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    if (type === 'correct') {
+      // 정답: 맑고 높은 호그와트 마법 령 소리 (주파수 급상승)
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime); // 도(C5)
+      osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.3); // 도(C6)
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } else if (type === 'incorrect') {
+      // 오답: 어둠의 마법에 당한 무거운 타격음 (주파수 하강)
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(180, ctx.currentTime); 
+      osc.frequency.linearRampToValueAtTime(60, ctx.currentTime + 0.4); 
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } else if (type === 'victory') {
+      // 대승리: 연쇄적인 크리스탈 차임벨 멜로디 연주
+      const now = ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // 도-미-솔-도 마법 화음
+      notes.forEach((freq, idx) => {
+        const noteOsc = ctx.createOscillator();
+        const noteGain = ctx.createGain();
+        noteOsc.type = 'sine';
+        noteOsc.frequency.setValueAtTime(freq, now + idx * 0.1);
+        noteGain.gain.setValueAtTime(0.15, now + idx * 0.1);
+        noteGain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.4);
+        noteOsc.connect(noteGain);
+        noteGain.connect(ctx.destination);
+        noteOsc.start(now + idx * 0.1);
+        noteOsc.stop(now + idx * 0.1 + 0.4);
+      });
+    }
+  } catch (e) {
+    console.log("AudioContext 재생 실패 오프셋 가드:", e);
+  }
+};
 
 export function MiniGameScreen() {
   const navigate = useNavigate()
@@ -52,25 +103,6 @@ export function MiniGameScreen() {
   const [isShaking, setIsShaking] = useState(false);
   const [flashColor, setFlashColor] = useState<string | null>(null);
 
-  // 🔮 [소리 안 남 해결 치트키] 화면이 켜지자마자 오디오 에셋을 브라우저 메모리에 사전 로드합니다.
-  useEffect(() => {
-    soundCorrect.load();
-    soundIncorrect.load();
-    soundVictory.load();
-    
-    // 브라우저 오디오 컨텍스트가 잠기는 것을 방지하기 위해 가볍게 무음 재생 시도
-    const unlockAudio = () => {
-      soundCorrect.play().then(() => {
-        soundCorrect.pause();
-        soundCorrect.currentTime = 0;
-      }).catch(() => {});
-      window.removeEventListener('click', unlockAudio);
-    };
-    window.addEventListener('click', unlockAudio);
-    
-    return () => window.removeEventListener('click', unlockAudio);
-  }, []);
-  
   const current = questions[index]
   const isLastQuestion = index >= questions.length - 1
 
@@ -82,8 +114,8 @@ export function MiniGameScreen() {
   };
 
   const triggerVictoryMagic = useCallback(() => {
-    soundVictory.currentTime = 0;
-    soundVictory.play().catch((e) => console.log('Audio blocked:', e));
+    // ⚡ 승리 사운드 트리거
+    playMagicSound('victory');
 
     const end = Date.now() + 2 * 1000;
     (function frame() {
@@ -114,9 +146,9 @@ export function MiniGameScreen() {
         setCorrectCount(nextCorrect)
         setEnemyHp((hp) => Math.max(0, hp - DAMAGE))
         
-        playDuelHitSound()
-        soundCorrect.currentTime = 0;
-        soundCorrect.play().catch(() => {});
+        // ⚡ 100% 무조건 터지는 정답 주파수 소리 발사!
+        playMagicSound('correct');
+        playDuelHitSound();
 
         setFlashColor(getHouseSpellColor());
         setIsShaking(true);
@@ -138,9 +170,9 @@ export function MiniGameScreen() {
       } else {
         setPlayerHp((hp) => Math.max(0, hp - DAMAGE))
         
-        playShieldHitSound()
-        soundIncorrect.currentTime = 0;
-        soundIncorrect.play().catch(() => {});
+        // ⚡ 100% 무조건 터지는 오답 주파수 소리 발사!
+        playMagicSound('incorrect');
+        playShieldHitSound();
 
         setFlashColor('bg-red-950/40');
         setTimeout(() => setFlashColor(null), 400);
@@ -266,7 +298,6 @@ export function MiniGameScreen() {
             exit={{ opacity: 0, y: -12 }}
             className="relative mt-6 flex-1 flex flex-col justify-center"
           >
-            {/* 🛠️ [버그 컷 2] 피격 시 라이트닝 이펙트와 잘려있던 중괄호 및 지연 노드를 복원 완비했습니다 */}
             {casting && (
               <motion.div
                 initial={{ scale: 0, opacity: 1 }}
