@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, Swords } from 'lucide-react'
-import { useCallback, useState } from 'react' 
+import { useCallback, useState, useEffect } from 'react' 
 import { useNavigate } from 'react-router-dom'
 import confetti from 'canvas-confetti' 
 import { CandleTimer } from '../components/CandleTimer'
@@ -52,6 +52,25 @@ export function MiniGameScreen() {
   const [isShaking, setIsShaking] = useState(false);
   const [flashColor, setFlashColor] = useState<string | null>(null);
 
+  // 🔮 [소리 안 남 해결 치트키] 화면이 켜지자마자 오디오 에셋을 브라우저 메모리에 사전 로드합니다.
+  useEffect(() => {
+    soundCorrect.load();
+    soundIncorrect.load();
+    soundVictory.load();
+    
+    // 브라우저 오디오 컨텍스트가 잠기는 것을 방지하기 위해 가볍게 무음 재생 시도
+    const unlockAudio = () => {
+      soundCorrect.play().then(() => {
+        soundCorrect.pause();
+        soundCorrect.currentTime = 0;
+      }).catch(() => {});
+      window.removeEventListener('click', unlockAudio);
+    };
+    window.addEventListener('click', unlockAudio);
+    
+    return () => window.removeEventListener('click', unlockAudio);
+  }, []);
+  
   const current = questions[index]
   const isLastQuestion = index >= questions.length - 1
 
