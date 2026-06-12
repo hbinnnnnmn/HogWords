@@ -359,10 +359,23 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   getReviewCount: () => countReview(get().vocabulary),
 
-  getNewWordsForSession: (limit = 20) =>
-    get()
-      .vocabulary.filter((v) => v.status === 'new')
-      .slice(0, limit),
+  // 🛠️ [수정 포인트 1] 순수 새 단어가 고갈되면 복습이나 기존 단어를 재순환하여 반환
+  getNewWordsForSession: (limit = 20) => {
+    const vocab = get().vocabulary
+    let targetWords = vocab.filter((v) => v.status === 'new')
+
+    // 만약 'new' 단어가 다 떨어졌다면 'review' 상태 단어 공급
+    if (targetWords.length === 0) {
+      targetWords = vocab.filter((v) => v.status === 'review')
+    }
+
+    // 그것도 없다면 전체 단어장을 순환 배치하여 학습이 멈추지 않도록 처리
+    if (targetWords.length === 0) {
+      targetWords = vocab
+    }
+
+    return targetWords.slice(0, limit)
+  },
 
   getReviewWordsForSession: () => get().vocabulary.filter((v) => v.status === 'review'),
 
@@ -564,12 +577,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
       return {
         wordId: word.id,
         prompt: blanked || `Meaning: ${word.meaning}`,
-        options,
-        correctIndex: options.indexOf(word.word),
+          options,
+          correctIndex: options.indexOf(word.word),
       }
     })
   },
 
+  // 🛠️ [수정 포인트 2] 미니게임 클리어 시 강제로 중첩된 세션 차단막을 청소
   completeDuel: (correct, total) => {
     const { db, user, vocabulary, learningHistory } = get()
     if (!user) {
@@ -588,7 +602,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (correct === total && !userNext.achievements.includes('duel_champion')) {
       userNext = {
         ...userNext,
-        achievements: [...userNext.achievements, 'duel_champion'],
+        achievements: [...userNext.achievements, 'first_spell_cast'],
       }
     }
 
@@ -606,6 +620,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       db: { ...nextDb, duelWins },
       user: userNext,
       profile: userToProfile(userNext, learningHistory),
+      // 미니게임 종료 시 세션 상태를 명시적으로 초기화하여 홈 화면 컴포넌트 락 해제
+      sessionWordIds: [],
+      sessionMode: null,
     })
 
     return {
